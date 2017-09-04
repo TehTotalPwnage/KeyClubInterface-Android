@@ -43,8 +43,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import io.tehtotalpwnage.keyclubinterface.LoginActivity;
-import io.tehtotalpwnage.keyclubinterface.VolleySingleton;
+import io.tehtotalpwnage.keyclubinterface.volley.VolleySingleton;
 
+import static android.accounts.AccountManager.KEY_ACCOUNT_TYPE;
 import static android.accounts.AccountManager.KEY_AUTHTOKEN;
 import static android.accounts.AccountManager.KEY_BOOLEAN_RESULT;
 
@@ -53,6 +54,7 @@ public class Authenticator extends AbstractAccountAuthenticator {
 
     private final Context mContext;
 
+    public static final String ARG_EMAIL_ADDRESS = "EMAIL_ADDRESS";
     public static final String ARG_SERVER_ADDRESS = "SERVER_ADDRESS";
 
     Authenticator(Context context) {
@@ -62,10 +64,10 @@ public class Authenticator extends AbstractAccountAuthenticator {
 
     @Override
     public Bundle addAccount(AccountAuthenticatorResponse response, String accountType, String authTokenType, String[] requiredFeatures, Bundle options) {
-        Log.d(TAG, "addAccount called");
+        Log.d(TAG, "Adding account of type " + accountType + " using addAccount method.");
 
         final Intent intent = new Intent(mContext, LoginActivity.class);
-        intent.putExtra(LoginActivity.ARG_ACCOUNT_TYPE, accountType);
+        intent.putExtra(KEY_ACCOUNT_TYPE, accountType);
         intent.putExtra(LoginActivity.ARG_AUTH_TYPE, authTokenType);
         intent.putExtra(LoginActivity.ARG_IS_ADDING_NEW_ACCOUNT, true);
         intent.putExtra(AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE, response);
@@ -92,14 +94,14 @@ public class Authenticator extends AbstractAccountAuthenticator {
         String authToken = am.peekAuthToken(account, authTokenType);
         if(TextUtils.isEmpty(authToken)) {
             Log.d(TAG, "authToken was empty...");
-            if (authTokenType.equals(KeyClubAccount.TOKENTYPE_ACCESS)) {
+            if (authTokenType.equals(KeyClubAccount.TOKEN_TYPE_ACCESS)) {
                 Log.d(TAG, "Attempting to retrieve refresh token...");
                 // Since the authToken requested was an access token, we're gonna try to get a refresh token now.
-                Bundle bundle = getAuthToken(response, account, KeyClubAccount.TOKENTYPE_REFRESH, options);
+                Bundle bundle = getAuthToken(response, account, KeyClubAccount.TOKEN_TYPE_REFRESH, options);
                 Log.d(TAG, "Refresh token retrieved. Checking for access token...");
-                if (!TextUtils.isEmpty(am.peekAuthToken(account, KeyClubAccount.TOKENTYPE_ACCESS))) {
+                if (!TextUtils.isEmpty(am.peekAuthToken(account, KeyClubAccount.TOKEN_TYPE_ACCESS))) {
                     Log.d(TAG, "Access token found. Setting access token...");
-                    authToken = am.peekAuthToken(account, KeyClubAccount.TOKENTYPE_ACCESS);
+                    authToken = am.peekAuthToken(account, KeyClubAccount.TOKEN_TYPE_ACCESS);
                 } else {
                     Log.d(TAG, "Access token still not found... Attempting to renew access token...");
                     final String refreshToken = bundle.getString(AccountManager.KEY_AUTHTOKEN);
@@ -119,8 +121,8 @@ public class Authenticator extends AbstractAccountAuthenticator {
                         String requestResponse = future.get();
                         Log.d(TAG, "Access token retrieved from server. Attempting to save...");
                         JSONObject object = new JSONObject(requestResponse);
-                        am.setAuthToken(account, KeyClubAccount.TOKENTYPE_ACCESS, object.getString("access_token"));
-                        am.setAuthToken(account, KeyClubAccount.TOKENTYPE_REFRESH, object.getString("refresh_token"));
+                        am.setAuthToken(account, KeyClubAccount.TOKEN_TYPE_ACCESS, object.getString("access_token"));
+                        am.setAuthToken(account, KeyClubAccount.TOKEN_TYPE_REFRESH, object.getString("refresh_token"));
                         am.invalidateAuthToken(KeyClubAccount.ACCOUNT_TYPE, refreshToken);
                         authToken = object.getString("access_token");
                     } catch (ExecutionException e) {
@@ -129,10 +131,10 @@ public class Authenticator extends AbstractAccountAuthenticator {
                             Log.d(TAG, "Access token renewal failed. Refresh token invalidated...");
                             // Refresh token is also having issues, so invalidate the old refresh token.
                             am.invalidateAuthToken(KeyClubAccount.ACCOUNT_TYPE, refreshToken);
-                            Bundle passwordBundle = getAuthToken(response, account, KeyClubAccount.TOKENTYPE_REFRESH, options);
+                            Bundle passwordBundle = getAuthToken(response, account, KeyClubAccount.TOKEN_TYPE_REFRESH, options);
                             if (passwordBundle.getString(KEY_AUTHTOKEN, null) != null) {
                                 // Refresh token was found.
-                                String token = am.peekAuthToken(account, KeyClubAccount.TOKENTYPE_ACCESS);
+                                String token = am.peekAuthToken(account, KeyClubAccount.TOKEN_TYPE_ACCESS);
                                 if (!TextUtils.isEmpty(token)) {
                                     authToken = token;
                                 }
@@ -162,8 +164,8 @@ public class Authenticator extends AbstractAccountAuthenticator {
                     try {
                         String requestResponse = future.get();
                         JSONObject object = new JSONObject(requestResponse);
-                        am.setAuthToken(account, KeyClubAccount.TOKENTYPE_REFRESH, object.getString("refresh_token"));
-                        am.setAuthToken(account, KeyClubAccount.TOKENTYPE_ACCESS, object.getString("access_token"));
+                        am.setAuthToken(account, KeyClubAccount.TOKEN_TYPE_REFRESH, object.getString("refresh_token"));
+                        am.setAuthToken(account, KeyClubAccount.TOKEN_TYPE_ACCESS, object.getString("access_token"));
                         authToken = object.getString("refresh_token");
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -185,7 +187,7 @@ public class Authenticator extends AbstractAccountAuthenticator {
         Log.v(TAG, "Unable to generate an authToken. Calling the LoginActivity...");
         final Intent intent = new Intent(mContext, LoginActivity.class);
         intent.putExtra(AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE, response);
-        intent.putExtra(LoginActivity.ARG_ACCOUNT_TYPE, account.type);
+        intent.putExtra(KEY_ACCOUNT_TYPE, account.type);
         intent.putExtra(LoginActivity.ARG_AUTH_TYPE, authTokenType);
         final Bundle bundle = new Bundle();
         bundle.putParcelable(AccountManager.KEY_INTENT, intent);
@@ -194,10 +196,10 @@ public class Authenticator extends AbstractAccountAuthenticator {
 
     @Override
     public String getAuthTokenLabel(String authTokenType) {
-        if (KeyClubAccount.TOKENTYPE_REFRESH.equals(authTokenType))
-            return KeyClubAccount.TOKENTYPE_REFRESH_LABEL;
-        else if (KeyClubAccount.TOKENTYPE_ACCESS.equals(authTokenType))
-            return KeyClubAccount.TOKENTYPE_ACCESS_LABEL;
+        if (KeyClubAccount.TOKEN_TYPE_REFRESH.equals(authTokenType))
+            return KeyClubAccount.TOKEN_TYPE_REFRESH_LABEL;
+        else if (KeyClubAccount.TOKEN_TYPE_ACCESS.equals(authTokenType))
+            return KeyClubAccount.TOKEN_TYPE_ACCESS_LABEL;
         else
             return authTokenType + " (Label)";
     }
