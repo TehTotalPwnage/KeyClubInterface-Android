@@ -17,8 +17,9 @@
  * along with KeyClubInterface.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.tehtotalpwnage.keyclubinterface;
+package io.tehtotalpwnage.keyclubinterface.authenticator;
 
+import android.accounts.Account;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -26,23 +27,28 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.TextView;
 
-class MeetingAdapter extends BaseAdapter {
-    private Context mContext;
-    private String[][] values;
+import io.tehtotalpwnage.keyclubinterface.R;
 
-    MeetingAdapter(Context context, String[][] values) {
+public class AccountAdapter extends BaseAdapter {
+    private Account[] mAccounts;
+
+    private Context mContext;
+
+
+    public AccountAdapter(Context context, Account[] values) {
+        this.mAccounts = values;
+
         this.mContext = context;
-        this.values = values;
     }
 
     @Override
     public int getCount() {
-        return values.length;
+        return mAccounts.length;
     }
 
     @Override
     public Object getItem(int position) {
-        return values[position];
+        return mAccounts[position];
     }
 
     @Override
@@ -58,20 +64,18 @@ class MeetingAdapter extends BaseAdapter {
             LayoutInflater inflater = (LayoutInflater) mContext.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
             convertView = inflater.inflate(R.layout.meeting_spinner, parent, false);
             holder = new ViewHolder();
-            holder.dateTime = (TextView) convertView.findViewById(R.id.textView3);
+            holder.accountInfo = (TextView) convertView.findViewById(R.id.textView3);
             convertView.setTag(holder);
         } else {
             holder = (ViewHolder) convertView.getTag();
         }
 
-        holder.dateTime.setText(values[position][1]);
+        holder.accountInfo.setText(mAccounts[position].name);
 
         return convertView;
     }
 
     private static class ViewHolder {
-        TextView dateTime;
+        TextView accountInfo;
     }
 }
-
-
