@@ -1,4 +1,23 @@
-package io.tehtotalpwnage.keyclubinterface;
+/*
+ * Copyright (c) 2017 Michael Nguyen
+ *
+ * This file is part of KeyClubInterface.
+ *
+ * KeyClubInterface is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * KeyClubInterface is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with KeyClubInterface.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package io.tehtotalpwnage.keyclubinterface.camera;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -9,10 +28,6 @@ import com.google.android.gms.vision.CameraSource;
 
 import java.util.HashSet;
 import java.util.Set;
-
-/**
- * Created by tehtotalpwnage on 8/18/17.
- */
 
 public class GraphicOverlay extends View {
     private final Object mLock = new Object();
@@ -35,15 +50,15 @@ public class GraphicOverlay extends View {
 
         public abstract void draw(Canvas canvas);
 
-        public float scaleX(float horizontal) {
+        float scaleX(float horizontal) {
             return horizontal * mOverlay.mWidthScaleFactor;
         }
 
-        public float scaleY(float vertical) {
+        float scaleY(float vertical) {
             return vertical * mOverlay.mHeightScaleFactor;
         }
 
-        public float translateX(float x) {
+        protected float translateX(float x) {
             if (mOverlay.mFacing == CameraSource.CAMERA_FACING_FRONT) {
                 return mOverlay.getWidth() - scaleX(x);
             } else {
@@ -51,11 +66,11 @@ public class GraphicOverlay extends View {
             }
         }
 
-        public float translateY(float y) {
+        protected float translateY(float y) {
             return scaleY(y);
         }
 
-        public void postInvalidate() {
+        protected void postInvalidate() {
             mOverlay.postInvalidate();
         }
     }

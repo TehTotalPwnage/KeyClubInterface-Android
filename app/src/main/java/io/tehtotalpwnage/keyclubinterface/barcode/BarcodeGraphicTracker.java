@@ -1,6 +1,24 @@
-package io.tehtotalpwnage.keyclubinterface;
+/*
+ * Copyright (c) 2017 Michael Nguyen
+ *
+ * This file is part of KeyClubInterface.
+ *
+ * KeyClubInterface is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * KeyClubInterface is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with KeyClubInterface.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-import android.app.Activity;
+package io.tehtotalpwnage.keyclubinterface.barcode;
+
 import android.content.Context;
 import android.content.DialogInterface;
 import android.support.v7.app.AlertDialog;
@@ -10,19 +28,18 @@ import com.google.android.gms.vision.Detector;
 import com.google.android.gms.vision.Tracker;
 import com.google.android.gms.vision.barcode.Barcode;
 
-/**
- * Created by tehtotalpwnage on 8/18/17.
- */
+import io.tehtotalpwnage.keyclubinterface.BarcodeScanActivity;
+import io.tehtotalpwnage.keyclubinterface.camera.GraphicOverlay;
 
-public class GraphicBarcodeTracker extends Tracker {
-    private final String TAG = GraphicBarcodeTracker.class.getSimpleName();
+class BarcodeGraphicTracker extends Tracker<Barcode> {
+    private final String TAG = BarcodeGraphicTracker.class.getSimpleName();
 
     private Context mContext;
     private BarcodeTrackerFactory mFactory;
     private GraphicOverlay mOverlay;
-    private TrackedBarcodeGraphic mGraphic;
+    private BarcodeGraphic mGraphic;
 
-    GraphicBarcodeTracker(Context context, GraphicOverlay overlay, TrackedBarcodeGraphic graphic, BarcodeTrackerFactory factory) {
+    BarcodeGraphicTracker(Context context, GraphicOverlay overlay, BarcodeGraphic graphic, BarcodeTrackerFactory factory) {
         mFactory = factory;
         mContext = context;
         mOverlay = overlay;
@@ -30,20 +47,20 @@ public class GraphicBarcodeTracker extends Tracker {
     }
 
     @Override
-    public void onNewItem(int i, final Object o) {
+    public void onNewItem(int i, final Barcode o) {
         mGraphic.setId(i);
-        Log.d(TAG, ((Barcode) o).displayValue);
-        if (mFactory.getList().contains(((Barcode) o).displayValue) || mFactory.isRequesting()) {
+        Log.d(TAG, o.displayValue);
+        if (mFactory.getList().contains(o.displayValue) || mFactory.isRequesting()) {
             return;
         }
         mFactory.setRequesting(true);
         final AlertDialog.Builder dialog = new AlertDialog.Builder(mContext);
         dialog.setTitle("Approve ID?")
-                .setMessage("ID Number: " + ((Barcode) o).displayValue)
+                .setMessage("ID Number: " + o.displayValue)
                 .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        mFactory.addID(((Barcode) o).displayValue);
+                        mFactory.addID(o.displayValue);
                         mFactory.setRequesting(false);
                     }
                 }).setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -73,8 +90,8 @@ public class GraphicBarcodeTracker extends Tracker {
     }
 
     @Override
-    public void onUpdate(Detector.Detections detections, Object o) {
+    public void onUpdate(Detector.Detections detections, Barcode o) {
         mOverlay.add(mGraphic);
-        mGraphic.updateItem((Barcode) o);
+        mGraphic.updateItem(o);
     }
 }

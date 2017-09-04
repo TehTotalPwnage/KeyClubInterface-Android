@@ -1,8 +1,26 @@
-package io.tehtotalpwnage.keyclubinterface;
+/*
+ * Copyright (c) 2017 Michael Nguyen
+ *
+ * This file is part of KeyClubInterface.
+ *
+ * KeyClubInterface is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * KeyClubInterface is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with KeyClubInterface.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package io.tehtotalpwnage.keyclubinterface.camera;
 
 import android.content.Context;
 import android.content.res.Configuration;
-import android.graphics.Camera;
 import android.util.AttributeSet;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -12,10 +30,6 @@ import com.google.android.gms.common.images.Size;
 import com.google.android.gms.vision.CameraSource;
 
 import java.io.IOException;
-
-/**
- * Created by tehtotalpwnage on 8/18/17.
- */
 
 public class CameraSourcePreview extends ViewGroup implements SurfaceHolder.Callback {
     private CameraSource mCameraSource;
@@ -47,7 +61,7 @@ public class CameraSourcePreview extends ViewGroup implements SurfaceHolder.Call
         try {
             startIfReady();
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
@@ -69,8 +83,11 @@ public class CameraSourcePreview extends ViewGroup implements SurfaceHolder.Call
             }
         }
 
+        // If the camera is in portrait mode, we want to swap width and height for a proper display.
         if (isPortraitMode()) {
             int tmp = width;
+            // Yes Android Studio, I *really* want to swap width and height.
+            // noinspection SuspiciousNameCombination
             width = height;
             height = tmp;
         }
@@ -92,17 +109,17 @@ public class CameraSourcePreview extends ViewGroup implements SurfaceHolder.Call
         try {
             startIfReady();
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
     private boolean isPortraitMode() {
         int orientation = mContext.getResources().getConfiguration().orientation;
-        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            return false;
-        }
         if (orientation == Configuration.ORIENTATION_PORTRAIT) {
             return true;
+        }
+        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            return false;
         }
         return false;
     }
