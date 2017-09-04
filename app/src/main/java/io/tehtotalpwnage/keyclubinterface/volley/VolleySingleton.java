@@ -17,7 +17,7 @@
  * along with KeyClubInterface.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.tehtotalpwnage.keyclubinterface;
+package io.tehtotalpwnage.keyclubinterface.volley;
 
 import android.content.Context;
 
