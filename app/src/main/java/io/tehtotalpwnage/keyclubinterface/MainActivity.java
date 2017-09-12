@@ -19,13 +19,18 @@
 
 package io.tehtotalpwnage.keyclubinterface;
 
+import android.Manifest;
 import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.accounts.AccountManagerCallback;
 import android.accounts.AccountManagerFuture;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -34,7 +39,6 @@ import android.widget.AdapterView;
 import android.widget.Spinner;
 
 import io.tehtotalpwnage.keyclubinterface.authenticator.AccountAdapter;
-import io.tehtotalpwnage.keyclubinterface.volley.VolleySingleton;
 
 import static android.accounts.AccountManager.KEY_ACCOUNT_NAME;
 import static android.accounts.AccountManager.KEY_ACCOUNT_TYPE;
@@ -45,15 +49,51 @@ import static io.tehtotalpwnage.keyclubinterface.authenticator.KeyClubAccount.TO
 public class MainActivity extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
     public static final String TAG = MainActivity.class.getSimpleName();
 
+    private final int REQUEST_CAMERA = 0;
+    private final int REQUEST_STORAGE = 1;
+
     private Account mAccount;
     private AccountManager mAccountManager;
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_STORAGE:
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    checkAuthentication();
+                } else {
+                    finish();
+                }
+                break;
+            default:
+                checkPermissions();
+                break;
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         mAccountManager = AccountManager.get(this);
-        VolleySingleton.getInstance(this);
+
+        checkPermissions();
+
+    }
+
+    @Override
+    public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
+        mAccount = (Account) parent.getItemAtPosition(pos);
+    }
+
+    @Override
+    public void onNothingSelected(AdapterView<?> parent) {
+
+    }
+
+    public void checkAuthentication() {
         final Account availableAccounts[] = mAccountManager.getAccountsByType(ACCOUNT_TYPE);
 
         if (availableAccounts.length == 0) {
@@ -94,13 +134,40 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         }
     }
 
-    @Override
-    public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
-        mAccount = (Account) parent.getItemAtPosition(pos);
-    }
-
-    @Override
-    public void onNothingSelected(AdapterView<?> parent) {
+    public void checkPermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_DENIED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
+                AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
+                alertDialog.setTitle("Requesting Camera Permission");
+                alertDialog.setMessage("The Camera permission is required for this app to be able to scan bar codes.");
+                alertDialog.setNeutralButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA);
+                    }
+                });
+            } else {
+                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA);
+            }
+        } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
+                alertDialog.setTitle("Requesting External Storage Permission");
+                alertDialog.setMessage("The External Storage permission is required for this app to be able to back up member lists.");
+                alertDialog.setNeutralButton("OK", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_STORAGE);
+                    }
+                });
+            } else {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_STORAGE);
+            }
+        } else {
+            checkAuthentication();
+        }
 
     }
 

@@ -19,17 +19,18 @@
 
 package io.tehtotalpwnage.keyclubinterface;
 
-import android.Manifest;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
+import android.os.Environment;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Spinner;
@@ -49,8 +50,17 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
+import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import io.tehtotalpwnage.keyclubinterface.barcode.BarcodeTrackerFactory;
@@ -66,7 +76,6 @@ import static android.widget.Toast.LENGTH_LONG;
 import static io.tehtotalpwnage.keyclubinterface.authenticator.Authenticator.ARG_SERVER_ADDRESS;
 
 public class BarcodeScanActivity extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
-    private final int REQUEST_CAMERA = 0;
     private final String TAG = BarcodeScanActivity.class.getSimpleName();
 
     private int meetingId;
@@ -162,9 +171,36 @@ public class BarcodeScanActivity extends AppCompatActivity implements AdapterVie
                                     @Override
                                     public void onResponse(String response) {
                                         Log.d(TAG, "Received response from server: " + response);
-                                        Toast.makeText(BarcodeScanActivity.this, "Meeting information sent successfully!", LENGTH_LONG).show();
-                                        BarcodeScanActivity.super.onBackPressed();
-                                        dialog.dismiss();
+                                        Log.d(TAG, "Now writing members to local storage...");
+                                        if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
+                                            File meetingDir = new File(BarcodeScanActivity.this.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
+                                                    NumberFormat.getInstance().format(meetingId));
+                                            if (!meetingDir.mkdirs()) {
+                                                Log.e(TAG, "Directory not created.");
+                                            }
+                                            File file = new File(meetingDir, "meeting-" + new SimpleDateFormat("HH-mm-ss", Locale.US).format(new Date()) + ".txt");
+                                            try {
+                                                JSONObject object = new JSONObject();
+                                                object.put("id", meetingId);
+                                                JSONArray members = new JSONArray();
+                                                for (String id : mFactory.getList()) {
+                                                    members.put(id);
+                                                }
+                                                object.put("members", members);
+                                                Writer writer = new BufferedWriter(new FileWriter(file));
+                                                writer.write(object.toString());
+                                                writer.close();
+                                                Toast.makeText(BarcodeScanActivity.this, "Meeting information sent successfully!", LENGTH_LONG).show();
+                                                BarcodeScanActivity.super.onBackPressed();
+                                                dialog.dismiss();
+                                            } catch (JSONException | IOException e) {
+                                                Toast.makeText(BarcodeScanActivity.this, "Error on saving member lists to local storage...", LENGTH_LONG).show();
+                                                dialog.dismiss();
+                                            }
+                                        } else {
+                                            Toast.makeText(BarcodeScanActivity.this, "Error on saving member lists to local storage...", LENGTH_LONG).show();
+                                            dialog.dismiss();
+                                        }
                                     }
                                 }, new Response.ErrorListener() {
                                     @Override
@@ -206,7 +242,14 @@ public class BarcodeScanActivity extends AppCompatActivity implements AdapterVie
                         dialog.dismiss();
                     }
                 }).show();
+    }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu_barcode_scan, menu);
+
+        return true;
     }
 
     @Override
@@ -216,22 +259,23 @@ public class BarcodeScanActivity extends AppCompatActivity implements AdapterVie
     }
 
     @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch(item.getItemId()) {
+            case R.id.list_members:
+                Intent intent = new Intent(this, BarcodeListActivity.class);
+                intent.putStringArrayListExtra("members", (ArrayList<String>) mFactory.getList());
+                startActivity(intent);
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
         Log.d(TAG, "Process is pausing. Stopping camera.");
         stopCamera();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
-        switch (requestCode) {
-            case REQUEST_CAMERA:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    getCamera();
-                } else {
-                    finish();
-                }
-        }
     }
 
     @Override
@@ -271,24 +315,7 @@ public class BarcodeScanActivity extends AppCompatActivity implements AdapterVie
                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        if (ContextCompat.checkSelfPermission(BarcodeScanActivity.this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_DENIED) {
-                            if (ActivityCompat.shouldShowRequestPermissionRationale(BarcodeScanActivity.this, Manifest.permission.CAMERA)) {
-                                AlertDialog.Builder alertDialog = new AlertDialog.Builder(BarcodeScanActivity.this);
-                                alertDialog.setTitle("Requesting Camera Permission");
-                                alertDialog.setMessage("The Camera permission is required for this app to be able to scan bar codes.");
-                                alertDialog.setNeutralButton("OK", new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        dialog.dismiss();
-                                        ActivityCompat.requestPermissions(BarcodeScanActivity.this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA);
-                                    }
-                                });
-                            } else {
-                                ActivityCompat.requestPermissions(BarcodeScanActivity.this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA);
-                            }
-                        } else {
-                            getCamera();
-                        }
+                        getCamera();
                     }
                 }).setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
                     @Override
